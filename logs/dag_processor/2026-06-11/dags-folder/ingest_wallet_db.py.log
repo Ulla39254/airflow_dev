@@ -1,0 +1,1 @@
+{"timestamp":"2026-06-11T01:45:46.615635Z","level":"info","event":"Filling up the DagBag from /opt/airflow/dags/ingest_wallet_db.py","logger":"airflow.dag_processing.dagbag.BundleDagBag","filename":"dagbag.py","lineno":469}

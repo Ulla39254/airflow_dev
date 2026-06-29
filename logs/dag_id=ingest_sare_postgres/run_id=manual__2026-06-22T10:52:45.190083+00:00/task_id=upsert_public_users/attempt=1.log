@@ -1,0 +1,51 @@
+{"timestamp":"2026-06-22T10:53:42.014602Z","level":"info","event":"DAG bundles loaded: dags-folder","logger":"airflow.dag_processing.bundles.manager.DagBundlesManager","filename":"manager.py","lineno":209}
+{"timestamp":"2026-06-22T10:53:42.015287Z","level":"info","event":"Filling up the DagBag from /opt/airflow/dags/ingest_wallet_db.py","logger":"airflow.dag_processing.dagbag.BundleDagBag","filename":"dagbag.py","lineno":469}
+{"timestamp":"2026-06-22T10:53:42.259873Z","level":"info","event":"Performing full table load (replace) for sare_wallet.users","logger":"root","filename":"ingest_wallet_db.py","lineno":135}
+{"timestamp":"2026-06-22T10:53:42.260045Z","level":"info","event":"Starting replace from S3 bucket 'sare-analytics' file 'ingest/wallet_test/users/dt=2026-06-22/ts=2026-06-22T10:52:42/data.parquet' to table 'sare_wallet.users'","logger":"root","filename":"s3_snapshot_load.py","lineno":55}
+{"timestamp":"2026-06-22T10:53:42.553948Z","level":"info","event":"Created temporary file: /tmp/airflow_tmp_wd54lken.parquet","logger":"root","filename":"s3_snapshot_load.py","lineno":70}
+{"timestamp":"2026-06-22T10:53:42.554060Z","level":"info","event":"Attempting to get S3 object: s3://sare-analytics/ingest/wallet_test/users/dt=2026-06-22/ts=2026-06-22T10:52:42/data.parquet","logger":"root","filename":"s3_snapshot_load.py","lineno":75}
+{"timestamp":"2026-06-22T10:53:42.563924Z","level":"info","event":"AWS Connection (conn_id='aws_s3-test', conn_type='aws') credentials retrieved from login and password.","logger":"airflow.providers.amazon.aws.utils.connection_wrapper.AwsConnectionWrapper","filename":"connection_wrapper.py","lineno":331}
+{"timestamp":"2026-06-22T10:53:45.507465Z","level":"info","event":"Downloading S3 file...","logger":"root","filename":"s3_snapshot_load.py","lineno":84}
+{"timestamp":"2026-06-22T10:53:53.501774Z","level":"info","event":"Download complete","logger":"root","filename":"s3_snapshot_load.py","lineno":86}
+{"timestamp":"2026-06-22T10:53:53.501950Z","level":"info","event":"Reading parquet file...","logger":"root","filename":"s3_snapshot_load.py","lineno":92}
+{"timestamp":"2026-06-22T10:53:54.034977Z","level":"info","event":"Loaded DataFrame with 323381 rows and columns: ['id', 'first_name', 'last_name', 'email', 'phone', 'shofco_id', 'password', 'created_at', 'updated_at', 'deleted_at', 'identification_number', 'created_by', 'updated_by', 'shofco_member_id', 'user_type', 'organization', 'wallet_pin', 'wallet_status', 'device_type', 'device_token', 'county_name', 'region_name', 'sub_county_name', 'ward_name']","logger":"root","filename":"s3_snapshot_load.py","lineno":94}
+{"timestamp":"2026-06-22T10:53:59.522034Z","level":"info","event":"Creating table if not exists: sare_wallet.users","logger":"root","filename":"s3_snapshot_load.py","lineno":124}
+{"timestamp":"2026-06-22T10:54:00.024168Z","level":"info","event":"Checking existing columns in sare_wallet.users","logger":"root","filename":"s3_snapshot_load.py","lineno":130}
+{"timestamp":"2026-06-22T10:54:01.085062Z","level":"info","event":"Truncating table sare_wallet.users for full load","logger":"root","filename":"s3_snapshot_load.py","lineno":151}
+{"timestamp":"2026-06-22T10:54:01.356244Z","level":"info","event":"Using REPLACE strategy - will truncate and insert all data","logger":"root","filename":"s3_snapshot_load.py","lineno":156}
+{"timestamp":"2026-06-22T10:54:01.356456Z","level":"info","event":"Starting batched replace of 323381 rows (batch_size=10000)","logger":"root","filename":"s3_snapshot_load.py","lineno":171}
+{"timestamp":"2026-06-22T10:54:09.754822Z","level":"info","event":"Processed 10000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:13.643660Z","level":"info","event":"Processed 20000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:16.817727Z","level":"info","event":"Processed 30000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:19.888255Z","level":"info","event":"Processed 40000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:22.765070Z","level":"info","event":"Processed 50000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:25.533928Z","level":"info","event":"Processed 60000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:28.389511Z","level":"info","event":"Processed 70000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:31.256639Z","level":"info","event":"Processed 80000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:34.231245Z","level":"info","event":"Processed 90000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:37.102724Z","level":"info","event":"Processed 100000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:39.558627Z","level":"info","event":"Processed 110000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:41.723190Z","level":"info","event":"Processed 120000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:43.642148Z","level":"info","event":"Processed 130000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:45.613967Z","level":"info","event":"Processed 140000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:48.254949Z","level":"info","event":"Processed 150000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:50.525867Z","level":"info","event":"Processed 160000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:52.348515Z","level":"info","event":"Processed 170000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:54.194990Z","level":"info","event":"Processed 180000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:56.140178Z","level":"info","event":"Processed 190000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:54:57.983970Z","level":"info","event":"Processed 200000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:00.041017Z","level":"info","event":"Processed 210000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:02.288741Z","level":"info","event":"Processed 220000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:04.332163Z","level":"info","event":"Processed 230000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:07.378382Z","level":"info","event":"Processed 240000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:11.296238Z","level":"info","event":"Processed 250000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:14.675375Z","level":"info","event":"Processed 260000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:17.650532Z","level":"info","event":"Processed 270000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:20.410427Z","level":"info","event":"Processed 280000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:23.083009Z","level":"info","event":"Processed 290000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:25.943856Z","level":"info","event":"Processed 300000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:29.117021Z","level":"info","event":"Processed 310000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:31.575257Z","level":"info","event":"Processed 320000 rows...","logger":"root","filename":"s3_snapshot_load.py","lineno":179}
+{"timestamp":"2026-06-22T10:55:32.594504Z","level":"info","event":"Processed 323381 rows total.","logger":"root","filename":"s3_snapshot_load.py","lineno":184}
+{"timestamp":"2026-06-22T10:55:32.821981Z","level":"info","event":"Replace completed successfully","logger":"root","filename":"s3_snapshot_load.py","lineno":189}
+{"timestamp":"2026-06-22T10:55:32.884024Z","level":"info","event":"Done. Returned value was: None","logger":"airflow.task.operators.airflow.providers.standard.decorators.python._PythonDecoratedOperator","filename":"python.py","lineno":229}

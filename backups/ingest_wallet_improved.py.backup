@@ -1,0 +1,416 @@
+import sys
+import os
+
+if "/home/ullah/airflow-dev/dags" not in sys.path and os.path.exists("/home/ullah/airflow-dev/dags"):
+    sys.path.insert(0, "/home/ullah/airflow-dev/dags")
+
+import logging
+from datetime import datetime, timedelta
+
+from airflow import DAG
+from airflow.sdk import task
+from airflow.providers.amazon.aws.transfers.sql_to_s3 import SqlToS3Operator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.common.sql.sensors.sql import SqlSensor
+from airflow.exceptions import AirflowException
+
+from configs.wallet_configs import INGESTION_CONFIGS
+from libs.s3_snapshot_load import upsert_from_s3_to_postgres
+
+
+# ---------------------------------------------------------------------------
+# Shared helper — single source of truth for the incremental cutoff.
+# Both check_source_data and build_query call this so they always operate
+# on exactly the same window.
+# ---------------------------------------------------------------------------
+def _incremental_cutoff(data_interval_start: datetime, lookback_hours: int) -> datetime:
+    """
+    Subtract lookback_hours from data_interval_start and snap to midnight UTC.
+    E.g. data_interval_start=2024-12-05 14:00, lookback_hours=48
+         → 2024-12-03 14:00 → snap → 2024-12-03 00:00:00
+    """
+    return (data_interval_start - timedelta(hours=lookback_hours)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+
+
+def _validate_incremental_config(config) -> None:
+    """
+    Raise early if delta_column is set but lookback_hours is missing.
+    Prevents a silent default from hiding a misconfiguration.
+    """
+    if config.delta_column is not None and not config.lookback_hours:
+        raise ValueError(
+            f"[{config.source_table}] delta_column='{config.delta_column}' requires "
+            "lookback_hours to be set. Either provide lookback_hours or set "
+            "delta_column=None to do a full table load."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Task 1 — Wait for source data to be available (prevents early extraction)
+# Uses reschedule mode to free up worker slots while waiting.
+# ---------------------------------------------------------------------------
+def _create_source_sensor(config, table_name: str):
+    """
+    Create a sensor that waits for fresh data in the source table.
+    For incremental loads: check if rows exist in the delta window.
+    For full loads: just check that the table is accessible.
+    """
+    table = config.source_table
+    
+    if config.delta_column is None:
+        # Full load: just verify table exists and has rows
+        sql_check = f"SELECT 1 FROM {table} LIMIT 1"
+        description = f"Wait for {table} (full load)"
+    else:
+        # Incremental: verify rows exist in the lookback window
+        description = (
+            f"Wait for {table} data "
+            f"(delta_column={config.delta_column}, lookback={config.lookback_hours}h)"
+        )
+        sql_check = (
+            f"SELECT COUNT(*) FROM {table} "
+            f"WHERE {config.delta_column} >= "
+            f"DATE_TRUNC('day', CURRENT_TIMESTAMP - INTERVAL '{config.lookback_hours} hours')"
+        )
+    
+    return SqlSensor(
+        task_id=f"wait_for_data_{table_name}",
+        conn_id=config.source_conn_id,
+        sql=sql_check,
+        poke_interval=30,          # Check every 30 seconds
+        timeout=3600,              # Fail if data not available within 1 hour
+        mode="reschedule",         # Release worker while waiting (cost-efficient)
+        doc=description,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Task 2 — Count rows that will be ingested.
+# Uses the exact same cutoff logic as build_query so the count is meaningful.
+# ---------------------------------------------------------------------------
+@task(
+    retries=2,
+    retry_delay=timedelta(minutes=2),
+)
+def check_source_data(config, **context) -> int:
+    """
+    Count rows to be extracted. This pre-check prevents wasted compute
+    on empty windows and provides early visibility into data freshness.
+    """
+    _validate_incremental_config(config)
+
+    hook = PostgresHook(postgres_conn_id=config.source_conn_id)
+    table = config.source_table
+
+    # Full load: delta_column is None → count everything
+    if config.delta_column is None:
+        logging.info(f"[{table}] Full load — counting all rows")
+        result = hook.get_first(f"SELECT COUNT(*) FROM {table}")
+        count = result[0] if result else 0
+        logging.info(f"[{table}] {count} total rows found")
+        return count
+
+    # Incremental: count within the same window build_query will use
+    cutoff = _incremental_cutoff(context["data_interval_start"], config.lookback_hours)
+    logging.info(
+        f"[{table}] Incremental load — counting rows where "
+        f"{config.delta_column} >= {cutoff} "
+        f"({config.lookback_hours}h lookback, snapped to midnight)"
+    )
+    query = (
+        f"SELECT COUNT(*) FROM {table} "
+        f"WHERE {config.delta_column} >= '{cutoff:%Y-%m-%d %H:%M:%S}'"
+    )
+    result = hook.get_first(query)
+    count = result[0] if result else 0
+    logging.info(f"[{table}] {count} rows in window")
+    return count
+
+
+# ---------------------------------------------------------------------------
+# Task 2b — Short-circuit: skip everything downstream when nothing to ingest.
+# Saves compute costs on empty windows.
+# ---------------------------------------------------------------------------
+@task.short_circuit
+def should_proceed(row_count: int, config) -> bool:
+    """
+    Skip extraction if no rows to process. Incremental loads with no new data
+    are not errors — they're expected on quiet windows.
+    """
+    table = config.source_table
+    if row_count == 0:
+        logging.info(
+            f"[{table}] Row count is 0 — skipping extraction and load. "
+            f"This is normal for quiet windows."
+        )
+        return False
+    logging.info(f"[{table}] {row_count} rows queued — proceeding with extraction")
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Task 3 — Build the extraction SQL for this run.
+#   • delta_column is None  → full SELECT (no WHERE clause)
+#   • delta_column is set   → incremental SELECT with midnight-snapped cutoff
+# The query is pushed to XCom and pulled by SqlToS3Operator via Jinja.
+# ---------------------------------------------------------------------------
+@task(retries=2, retry_delay=timedelta(minutes=2))
+def build_query(config, **context) -> str:
+    """
+    Construct the SQL query for this extraction run.
+    Query is deterministic based on data_interval_start and lookback logic.
+    """
+    _validate_incremental_config(config)
+
+    table = config.source_table
+
+    # Full load
+    if config.delta_column is None:
+        logging.info(f"[{table}] Building full table query")
+        return f"SELECT * FROM {table}"
+
+    # Incremental
+    data_interval_start = context.get("data_interval_start")
+    if not data_interval_start:
+        # Safeguard: data_interval_start should always be present for scheduled runs
+        raise RuntimeError(
+            f"[{table}] data_interval_start is missing from context. "
+            "Ensure the DAG is triggered by the scheduler (not manually without a logical date)."
+        )
+
+    cutoff = _incremental_cutoff(data_interval_start, config.lookback_hours)
+    logging.info(
+        f"[{table}] Building incremental query — "
+        f"cutoff={cutoff} ({config.lookback_hours}h lookback, snapped to midnight)"
+    )
+    return (
+        f"SELECT * FROM {table} "
+        f"WHERE {config.delta_column} >= '{cutoff:%Y-%m-%d %H:%M:%S}'::timestamptz"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Task 4 — Extract from source to S3 (handled by SqlToS3Operator)
+# Retry logic here handles transient source/S3 connectivity issues.
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Task 5 — Upsert from S3 to target Postgres table
+# For incremental loads, depends_on_past ensures runs don't overlap.
+# ---------------------------------------------------------------------------
+@task(
+    retries=3,
+    retry_delay=timedelta(minutes=5),
+    retry_exponential_backoff=True,
+    max_retry_delay=timedelta(minutes=30),
+    depends_on_past=True,  # ← CRITICAL: ensures incremental loads don't overlap
+)
+def upsert_data(config, bucket, file_path, batch_size=10000, **context):
+    """
+    Load data from S3 into target table.
+    - depends_on_past=True ensures run N waits for run N-1 (prevents data gaps).
+    - Full loads use "replace" strategy (truncate + insert).
+    - Incremental loads use "upsert" strategy (merge on primary key).
+    """
+    table = config.target_table
+    
+    try:
+        if config.delta_column is None:
+            # For full table loads, use replace strategy (truncate and insert)
+            logging.info(
+                f"[{table}] Performing full table load (replace strategy). "
+                f"File: s3://{bucket}/{file_path}"
+            )
+            result = upsert_from_s3_to_postgres(
+                bucket=bucket,
+                file_path=file_path,
+                target_conn_id=config.target_conn_id,
+                target_table=config.target_table,
+                primary_keys=config.primary_keys,
+                file_format=config.file_format,
+                aws_conn_id="aws_s3-test",
+                batch_size=batch_size,
+                load_strategy="replace"
+            )
+        else:
+            # For incremental loads, use upsert strategy
+            logging.info(
+                f"[{table}] Performing incremental load (upsert strategy). "
+                f"File: s3://{bucket}/{file_path}"
+            )
+            result = upsert_from_s3_to_postgres(
+                bucket=bucket,
+                file_path=file_path,
+                target_conn_id=config.target_conn_id,
+                target_table=config.target_table,
+                primary_keys=config.primary_keys,
+                file_format=config.file_format,
+                aws_conn_id="aws_s3-test",
+                batch_size=batch_size,
+                load_strategy="upsert"
+            )
+        
+        logging.info(f"[{table}] Upsert completed successfully. Result: {result}")
+        return result
+        
+    except Exception as e:
+        logging.error(f"[{table}] Upsert failed: {str(e)}")
+        raise
+
+
+# ---------------------------------------------------------------------------
+# Task 6 — Post-load validation: verify data was loaded and row count makes sense
+# Catches silent failures where S3 file was corrupt or upload incomplete.
+# ---------------------------------------------------------------------------
+@task(retries=1, retry_delay=timedelta(minutes=1))
+def validate_load(config, row_count_source: int, **context) -> dict:
+    """
+    Validate that data was successfully loaded to target.
+    - For empty windows (row_count_source=0), skip validation.
+    - For non-empty windows, verify row count is reasonable (within ±20% is acceptable).
+    - This catches silent failures where the S3 file was truncated or corrupted.
+    """
+    table = config.target_table
+    data_interval_start = context["data_interval_start"]
+    
+    # If source had no rows, validation is N/A
+    if row_count_source == 0:
+        logging.info(f"[{table}] Source had 0 rows — skipping target validation")
+        return {"validated": True, "reason": "empty_window"}
+    
+    hook = PostgresHook(postgres_conn_id=config.target_conn_id)
+    
+    try:
+        # For full loads, just check table is non-empty
+        if config.delta_column is None:
+            result = hook.get_first(f"SELECT COUNT(*) FROM {table}")
+            target_count = result[0] if result else 0
+            logging.info(f"[{table}] Full load validation: {target_count} total rows in target")
+            if target_count == 0:
+                raise AirflowException(
+                    f"[{table}] Full load completed but target table is empty!"
+                )
+            return {
+                "validated": True,
+                "target_row_count": target_count,
+                "source_row_count": row_count_source
+            }
+        
+        # For incremental loads, verify count in the loaded window
+        cutoff = _incremental_cutoff(data_interval_start, config.lookback_hours)
+        result = hook.get_first(
+            f"SELECT COUNT(*) FROM {table} "
+            f"WHERE {config.delta_column} >= '{cutoff:%Y-%m-%d %H:%M:%S}'"
+        )
+        target_count = result[0] if result else 0
+        
+        # Allow ±20% variance (accounts for duplicates removed in upsert, etc.)
+        tolerance_pct = 0.2
+        lower_bound = int(row_count_source * (1 - tolerance_pct))
+        upper_bound = int(row_count_source * (1 + tolerance_pct))
+        
+        logging.info(
+            f"[{table}] Incremental load validation: "
+            f"source={row_count_source}, target={target_count}, "
+            f"acceptable range=[{lower_bound}, {upper_bound}]"
+        )
+        
+        if target_count < lower_bound:
+            raise AirflowException(
+                f"[{table}] Row count mismatch: extracted {row_count_source} rows "
+                f"but only {target_count} in target (below tolerance). "
+                f"Check for data loss in upsert."
+            )
+        
+        return {
+            "validated": True,
+            "source_row_count": row_count_source,
+            "target_row_count": target_count,
+            "variance_pct": round((target_count - row_count_source) / row_count_source * 100, 2)
+        }
+        
+    except Exception as e:
+        logging.error(f"[{table}] Validation failed: {str(e)}")
+        raise
+
+
+# ---------------------------------------------------------------------------
+# DAG definition
+# ---------------------------------------------------------------------------
+default_args = {
+    "retries": 2,
+    "retry_delay": timedelta(minutes=3),
+    "retry_exponential_backoff": True,
+    "max_retry_delay": timedelta(minutes=30),
+}
+
+with DAG(
+    dag_id="ingest_sare_wallet",
+    start_date=datetime(2024, 12, 1),
+    schedule="@daily",
+    catchup=False,  # ← CHANGED: Prevent auto-flooding on first deploy
+    max_active_runs=1,  # ← NEW: Serialize runs to prevent overlapping windows
+    render_template_as_native_obj=True,
+    tags=["sare", "wallet", "ingest"],
+    default_args=default_args,
+) as dag:
+    
+    all_upsert_tasks = []  # Collect upsert tasks for potential downstream dependencies
+    
+    for config in INGESTION_CONFIGS:
+        table_name = config.source_table.replace(".", "_")
+
+        # 1. Wait for source data to be available (cost-efficient: reschedule mode)
+        sensor = _create_source_sensor(config, table_name)
+
+        # 2. Count rows to be ingested
+        check = check_source_data.override(
+            task_id=f"check_source_data_{table_name}"
+        )(config)
+
+        # 3. Short-circuit if nothing to do (saves compute on empty windows)
+        gate = should_proceed.override(
+            task_id=f"should_proceed_{table_name}"
+        )(row_count=check, config=config)
+
+        # 4. Build the SQL for this run (result stored in XCom)
+        sql = build_query.override(
+            task_id=f"build_query_{table_name}"
+        )(config)
+
+        # 5. Extract from Postgres → S3
+        #    The sql field pulls the query built in step 4 via XCom at runtime.
+        #    Retry logic handles transient connectivity issues.
+        extract = SqlToS3Operator(
+            task_id=f"extract_to_s3_{table_name}",
+            query=sql,  # This will pull the query string from XCom
+            s3_bucket=config.bucket,
+            s3_key=config.file_path,
+            sql_conn_id=config.source_conn_id,
+            aws_conn_id="aws_s3-test",
+            replace=True,
+            file_format=config.file_format,
+            retries=3,  # Transient S3/network issues
+            retry_delay=timedelta(minutes=5),
+        )
+
+        # 6. Upsert from S3 to target Postgres table
+        #    depends_on_past=True ensures incremental loads don't overlap.
+        upsert = upsert_data.override(
+            task_id=f"upsert_{table_name}"
+        )(config, config.bucket, config.file_path)
+
+        # 7. Validate that data loaded successfully
+        validate = validate_load.override(
+            task_id=f"validate_load_{table_name}"
+        )(config, check)
+
+        # Dependency chain:
+        # sensor → check → should_proceed → build_query → extract → upsert → validate
+        # The short-circuit (gate) skips build_query/extract/upsert if row_count=0
+        sensor >> check >> gate >> sql >> extract >> upsert >> validate
+        
+        all_upsert_tasks.append(upsert)
