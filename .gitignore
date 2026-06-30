@@ -9,4 +9,4 @@ wheels/
 # Virtual environments
 .venv
 #project folders
-/home/ullah/airflow-dev/logs
+/airflow-dev/logs
