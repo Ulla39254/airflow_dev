@@ -25,7 +25,7 @@ INGESTION_CONFIGS = [
         target_conn_id="prod_analytics",  
         target_table="sare_wallet.ledger",
         delta_column= "updated_at",  # No delta column for full load; adjust if incremental logic is added
-        lookback_hours= 48,
+        lookback_hours= 2,
         bucket="sare-analytics",
         file_path="ingest/wallet_test/ledger/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
         primary_keys=["id"],
@@ -36,8 +36,8 @@ INGESTION_CONFIGS = [
         source_table="public.users",
         target_conn_id="prod_analytics",  
         target_table="sare_wallet.users",
-        delta_column="updated_at",  # No delta column for full load; adjust if incremental logic is added
-        lookback_hours= 48,
+        delta_column= "updated_at",  # No delta column for full load; adjust if incremental logic is added
+        lookback_hours= 2,
         bucket="sare-analytics",
         file_path="ingest/wallet_test/users/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
         primary_keys=["id"],
