@@ -181,7 +181,7 @@ def log_transform_summary(transform_results, index_results):
 with DAG(
     dag_id="transform_dwh",
     start_date=datetime(2024, 12, 1),
-    schedule=None,  # Changed from "@hourly" - now triggered by SAP HANA DAG
+    schedule=None,  # Changed from "@hourly" - now triggered by wallet ingest dag
     catchup=False,
     render_template_as_native_obj=True,
     tags=["transform", "dwh", "sare"],
