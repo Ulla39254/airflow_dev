@@ -185,6 +185,7 @@ with DAG(
     start_date=datetime(2024, 12, 1),
     schedule=None,  # Changed from "@hourly" - now triggered by SAP HANA DAG
     catchup=False,
+    max_active_runs=1,  # Limit to 1 active run to avoid overlapping transformations
     render_template_as_native_obj=True,
     tags=["transform", "dwh", "sare"],
     description="Transform raw data into user-facing DWH tables with optimized indexes"

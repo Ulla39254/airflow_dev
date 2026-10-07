@@ -119,8 +119,14 @@ def check_source_data(config, **context) -> int:
 # BUG FIX (#1): this was commented out in the original DAG, which meant
 # every run extracted and upserted even when check_source_data found 0 rows —
 # wasted Postgres/S3 round-trips on every empty-window run.
+#
+# ignore_downstream_trigger_rules=False: only the direct downstream task
+# (build_query) is skipped; the skip then propagates normally through
+# extract/upsert. With the default (True), every downstream task — including
+# the shared trigger_wallet_transformation — was force-skipped whenever any
+# single table had 0 rows, bypassing its trigger_rule='all_done'.
 # ---------------------------------------------------------------------------
-@task.short_circuit
+@task.short_circuit(ignore_downstream_trigger_rules=False)
 def should_proceed(row_count: int) -> bool:
     if row_count == 0:
         logging.info("Row count is 0 — skipping downstream tasks")
