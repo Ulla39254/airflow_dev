@@ -10,9 +10,11 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from airflow import DAG
-from airflow.decorators import task
+from airflow.sdk import task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from configs.wallet_transform_config import TRANSFORM_CONFIGS, IndexConfig
+from configs.wallet_transform_configs import TRANSFORM_CONFIGS, IndexConfig
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+
 
 def read_sql_file(sql_file_path):
     """Read SQL file content"""
@@ -181,7 +183,7 @@ def log_transform_summary(transform_results, index_results):
 with DAG(
     dag_id="transform_dwh",
     start_date=datetime(2024, 12, 1),
-    schedule=None,  # Changed from "@hourly" - now triggered by wallet ingest dag
+    schedule=None,  # Changed from "@hourly" - now triggered by SAP HANA DAG
     catchup=False,
     render_template_as_native_obj=True,
     tags=["transform", "dwh", "sare"],
@@ -249,4 +251,16 @@ with DAG(
     
     # Set final dependencies - summary runs after all indexes are created
     for index_task in all_index_tasks:
-        index_task >> summary 
+        index_task >> summary
+#created trigger task to trigger materialized view refresh after all tables are transformed and indexed.     
+    # trigger_mv_resfresh = TriggerDagRunOperator(
+    #     task_id='trigger_mv_refresh',
+    #     trigger_dag_id='mv_refresh',
+    #     wait_for_completion=False,
+    #     reset_dag_run=True,
+    #     conf={'triggered_by': 'transform_dwh', 'execution_date': '{{ ds }}'},
+    #     allowed_states=['success'],
+    #     # Continue pipeline even if some SAP HANA tables failed
+    #     trigger_rule='all_done'
+    # )
+    # summary >> trigger_mv_resfresh  

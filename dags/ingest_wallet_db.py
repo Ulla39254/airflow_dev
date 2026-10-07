@@ -11,8 +11,7 @@ from airflow import DAG
 from airflow.sdk import task
 from airflow.providers.amazon.aws.transfers.sql_to_s3 import SqlToS3Operator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-# from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
-
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 from configs.wallet_configs import INGESTION_CONFIGS
 from libs.s3_snapshot_load import upsert_from_s3_to_postgres
 
@@ -206,7 +205,17 @@ with DAG(
     # consider splitting them into a separate, less-frequent DAG rather
     # than letting them ride along on this @hourly schedule.
     schedule="@hourly",
-    catchup=False,
+    # BACKFILL: catchup=True so that missed hourly intervals (e.g. Airflow
+    # downtime) are scheduled and run on restart instead of being skipped.
+    # Safe here because every task derives its query window from
+    # data_interval_start/data_interval_end rather than datetime.now(), so a
+    # backfilled run for a past hour queries that historical window correctly.
+    # max_active_runs throttles how many missed intervals run concurrently —
+    # without it, a long outage would fire all missed runs at once, which is
+    # risky for the full-table-replace configs (delta_column=None) that
+    # TRUNCATE + reload their entire source table on every run.
+    catchup=True,
+    max_active_runs=5,
     render_template_as_native_obj=True,
     tags=["sare", "wallet", "ingest"],
 ) as dag:
@@ -241,6 +250,7 @@ with DAG(
             aws_conn_id="aws_s3-test",
             replace=True,
             file_format=config.file_format,
+            read_kwargs={"dtype_backend": "pyarrow"},    #skips buggy astype(str) conversion implemented in SqlToS3Operator
         )
 
         # 5. Upsert from S3 storage into target postgres table
@@ -255,3 +265,17 @@ with DAG(
         #   check_source_data → should_proceed → build_query → extract_to_s3 → upsert
         check >> gate >> sql >> extract >> upsert
         all_upsert_tasks.append(upsert)
+    # Trigger DWH transformation after all postgres tables are processed
+    # Continue even if some tables failed - maximum resilience
+    trigger_transformation = TriggerDagRunOperator(
+        task_id='trigger_wallet_transformation',
+        trigger_dag_id='transform_dwh',
+        wait_for_completion=False,
+        reset_dag_run=True,
+        conf={'triggered_by': 'postgres_ingestion', 'execution_date': '{{ ds }}'},
+        allowed_states=['success'],
+        # Continue pipeline even if some postgres tables failed
+        trigger_rule='all_done'
+        )
+    # All upsert tasks must complete before triggering DWH transformation
+    all_upsert_tasks >> trigger_transformation
