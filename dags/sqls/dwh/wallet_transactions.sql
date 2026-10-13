@@ -6,6 +6,7 @@ select
   wt.mobile_money_transaction_id,    --uuid [ref: > mobile_money_transactions.id]
   wt.payment_method,
   wt.amount::float as amount,
+  wt.transaction_fee::float as transaction_fee,
   wt.balance_before::float as balance_before,
   wt.balance_after::float as balance_after,
   wt.wallet_transaction_status,
@@ -13,7 +14,8 @@ select
   u.first_name as created_by,
   wt.updated_at::timestamp as updated_at,
   u2.first_name as updated_by,
-  wt.deleted_at::timestamp as deleted_at
+  wt.deleted_at::timestamp as deleted_at,
+  wt.status_description
 
 from sare_wallet.wallet_transactions wt
 join sare_wallet.users u on u.id = wt.created_by

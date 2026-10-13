@@ -12,5 +12,5 @@ select
   rsc.updated_at::timestamp as updated_at,
   rsc.updated_by,
   rsc.deleted_at::timestamp as deleted_at,
-  rsc.deleted_by,
+  rsc.deleted_by
 from sare_wallet.revenue_split_configurations rsc

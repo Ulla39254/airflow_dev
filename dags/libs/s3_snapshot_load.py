@@ -3,6 +3,9 @@ import tempfile
 import logging
 from psycopg2.extras import execute_values
 
+
+_NULL_SENTINELS = {"none", "null", "nan", "na", ",<na>"}  # Lowercase strings that should be treated as NULL
+
 def _to_sql_value(val):
     """Convert pandas/NumPy scalars and missing values into SQL/psycopg2 safe Python types.
     - pd.NA/NaN -> None
@@ -20,9 +23,11 @@ def _to_sql_value(val):
     try:
         if pd.isna(val):
             return None
-    except TypeError:
+    except (TypeError, ValueError):
         # Some objects raise on isna; ignore and continue
         pass
+    if isinstance(val, str) and val.strip().lower()in _NULL_SENTINELS:
+        return None
     # Convert numpy scalar types to native python
     if isinstance(val, np.generic):
         return val.item()
