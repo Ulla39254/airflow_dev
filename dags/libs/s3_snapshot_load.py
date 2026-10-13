@@ -38,7 +38,7 @@ def upsert_from_s3_to_postgres(
     target_table: str,
     primary_keys: list,
     file_format: str = "parquet",
-    aws_conn_id: str = "aws_em_test",
+    aws_conn_id: str = "aws_s3_test",
     batch_size: int = 10000,
     load_strategy: str = "upsert"  # "upsert" or "replace"
 ):
