@@ -132,7 +132,7 @@ def should_proceed(row_count: int) -> bool:
         logging.info("Row count is 0 — skipping downstream tasks")
         return False
     logging.info(f"{row_count} rows queued — proceeding with extraction")
-    return True
+    return True 
 
 
 # ---------------------------------------------------------------------------
@@ -220,7 +220,7 @@ with DAG(
     # without it, a long outage would fire all missed runs at once, which is
     # risky for the full-table-replace configs (delta_column=None) that
     # TRUNCATE + reload their entire source table on every run.
-    catchup=True,
+    catchup=False,
     max_active_runs=5,
     render_template_as_native_obj=True,
     tags=["sare", "wallet", "ingest"],

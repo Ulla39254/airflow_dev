@@ -202,4 +202,134 @@ TRANSFORM_CONFIGS = [
             ),
         ]
     ),
+    # TransformConfig(
+    #     sql_file="agent_transactions.sql",
+    #     target_table="agent_transactions",
+    #     description="shows all agent transactions and their details",
+    #     indexes=[
+    #         IndexConfig(
+    #             name="id",
+    #             columns=["id"],
+    #             unique=True,
+    #             description="Primary key index for agent transactions table"
+    #         ),
+    #     ]
+    # ),
+    # TransformConfig(
+    #     sql_file="areas.sql",
+    #     target_table="areas",
+    #     description="shows all areas and their details",
+    #     indexes=[
+    #         IndexConfig(
+    #             name="id",
+    #             columns=["id"],
+    #             unique=True,
+    #             description="Primary key index for areas table"
+    #         ),
+    #     ]
+    # ),
+    TransformConfig(
+        sql_file="bank_transactions.sql",
+        target_table="bank_transactions",
+        description="shows all bank transactions and their details",
+        indexes=[
+            IndexConfig(
+                name="id",
+                columns=["id"],
+                unique=True,
+                description="Primary key index for bank transactions table"
+            ),
+        ]
+    ),
+    TransformConfig(
+        sql_file="banks.sql",
+        target_table="banks",
+        description="shows all banks and their details",
+        indexes=[
+            IndexConfig(
+                name="id",
+                columns=["id"],
+                unique=True,
+                description="Primary key index for banks table"
+            ),
+        ]
+    ),
+    TransformConfig(
+        sql_file="bill_accounts.sql",
+        target_table="bill_accounts",
+        description="shows all bill accounts and their details",
+        indexes=[
+            IndexConfig(
+                name="id",
+                columns=["id"],
+                unique=True,
+                description="Primary key index for bill accounts table"
+            ),
+        ]
+    ),
+    # TransformConfig(
+    #     sql_file="bill_payment_transactions.sql",
+    #     target_table="bill_payment_transactions",
+    #     description="shows all bill payment transactions and their details",
+    #     indexes=[
+    #         IndexConfig(
+    #             name="id",
+    #             columns=["id"],
+    #             unique=True,
+    #             description="Primary key index for bill payment transactions table"
+    #         ),
+    #     ]
+    # ),
+    TransformConfig(
+        sql_file="business_profiles.sql",
+        target_table="business_profiles",
+        description="shows all business profiles for business wallets and their details",
+        indexes=[
+            IndexConfig(
+                name="id",
+                columns=["id"],
+                unique=True,
+                description="Primary key index for business profiles table"
+            ),
+        ]
+    ),
+    # TransformConfig(
+    #     sql_file="c2b_mpesa_transactions.sql",
+    #     target_table="c2b_mpesa_transactions",
+    #     description="shows all customer to business mpesa transactions and their details",
+    #     indexes=[
+    #         IndexConfig(
+    #             name="id",
+    #             columns=["id"],
+    #             unique=True,
+    #             description="Primary key index for c2b mpesa transactions table"
+    #         ),
+    #     ]
+    # ),
+    TransformConfig(
+        sql_file="ledger_postings.sql",
+        target_table="ledger_postings",
+        description="shows all ledger postings and their details",
+        indexes=[
+            IndexConfig(
+                name="id",
+                columns=["id"],
+                unique=True,
+                description="Primary key index for ledger postings table"
+            ),
+        ]
+    ),
+    TransformConfig(
+        sql_file="sw_journal_entries.sql",
+        target_table="journal_entries",
+        description="shows all journal entries and their details",
+        indexes=[
+            IndexConfig(
+                name="id",
+                columns=["id"],
+                unique=True,
+                description="Primary key index for journal entries table"
+            ),
+        ]
+    ),
 ]
