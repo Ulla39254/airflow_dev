@@ -1,22 +1,38 @@
 select
-  wt.id,   --uuid [primary key]
-  wt.reference,
-  wt.source_wallet_id,     --uuid [ref: > wallets.id]
-  wt.destination_wallet_id,    --uuid [ref: > wallets.id]
-  wt.mobile_money_transaction_id,    --uuid [ref: > mobile_money_transactions.id]
-  wt.payment_method,
-  wt.amount::float as amount,
-  wt.transaction_fee::float as transaction_fee,
-  wt.balance_before::float as balance_before,
-  wt.balance_after::float as balance_after,
-  wt.wallet_transaction_status,
-  wt.created_at::timestamp as created_at,
-  u.first_name as created_by,
-  wt.updated_at::timestamp as updated_at,
-  u2.first_name as updated_by,
-  wt.deleted_at::timestamp as deleted_at,
-  wt.status_description
-
-from sare_wallet.wallet_transactions wt
-join sare_wallet.users u on u.id = wt.created_by
-join sare_wallet.users u2 on u2.id = wt.updated_by
+  id,
+  reference,
+  source_wallet_id,
+  destination_wallet_id,
+  mobile_money_transaction_id,
+  amount::float as amount,
+  balance_before::float as balance_before,
+  balance_after::float as balance_after,
+  wallet_transaction_status,
+  created_at::timestamp as created_at,
+  created_by,
+  updated_at::timestamp as updated_at,
+  updated_by,
+  deleted_at::timestamp as deleted_at,
+  transaction_fee::float as transaction_fee,
+  transaction_type,
+  provider_tx_id,
+  provider_external_tx_id,
+  provider_reported_balance::float as provider_reported_balance,
+  phone_number,
+  currency,
+  provider_reported_balance,
+  transaction_date::timestamp as transaction_date,
+  error_code,
+  error_message,
+  parent_transaction_id,
+  direction,
+  unconfirmed_since,
+  failed_attempt_count,
+  category,
+  bank_transaction_id,
+  hold_amount,
+  bill_payment_transaction_id,
+  airtime_transaction_id,
+  narration,
+  counterparty_name
+from sare_wallet.wallet_transactions
