@@ -175,4 +175,136 @@ INGESTION_CONFIGS = [
         primary_keys=["id"],
         file_format="parquet"
     ),
+    # IngestionConfig(
+    #     source_conn_id="wallet_db_test",
+    #     source_table="public.agent_transactions",
+    #     target_conn_id="prod_analytics",  
+    #     target_table="sare_wallet.agent_transactions",
+    #     delta_column=None,  # No delta column for full load; adjust if incremental logic is added
+    #     lookback_hours=None,  # Lookback window of 2 hours for incremental loads
+    #     bucket="sare-analytics",
+    #     file_path="ingest/wallet_test/agent_transactions/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
+    #     primary_keys=["id"],
+    #     file_format="parquet"
+    # ),
+    IngestionConfig(
+        source_conn_id="wallet_db_test",
+        source_table="public.airtime_transactions",
+        target_conn_id="prod_analytics",  
+        target_table="sare_wallet.airtime_transactions",
+        delta_column=None,  # No delta column for full load; adjust if incremental logic is added
+        lookback_hours=None,  # Lookback window of 2 hours for incremental loads
+        bucket="sare-analytics",
+        file_path="ingest/wallet_test/airtime_transactions/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
+        primary_keys=["id"],
+        file_format="parquet"
+    ),
+    # IngestionConfig(
+    #     source_conn_id="wallet_db_test",
+    #     source_table="public.areas",
+    #     target_conn_id="prod_analytics",  
+    #     target_table="sare_wallet.areas",
+    #     delta_column=None,  # No delta column for full load; adjust if incremental logic is added
+    #     lookback_hours=None,  # Lookback window of 2 hours for incremental loads
+    #     bucket="sare-analytics",
+    #     file_path="ingest/wallet_test/areas/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
+    #     primary_keys=["id"],
+    #     file_format="parquet"
+    # ),
+    IngestionConfig(
+        source_conn_id="wallet_db_test",
+        source_table="public.bank_transactions",
+        target_conn_id="prod_analytics",  
+        target_table="sare_wallet.bank_transactions",
+        delta_column=None,  # No delta column for full load; adjust if incremental logic is added
+        lookback_hours=None,  # Lookback window of 2 hours for incremental loads
+        bucket="sare-analytics",
+        file_path="ingest/wallet_test/bank_transactions/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
+        primary_keys=["id"],
+        file_format="parquet"
+    ),
+    IngestionConfig(
+        source_conn_id="wallet_db_test",
+        source_table="public.banks",
+        target_conn_id="prod_analytics",  
+        target_table="sare_wallet.banks",
+        delta_column=None,  # No delta column for full load; adjust if incremental logic is added
+        lookback_hours=None,  # Lookback window of 2 hours for incremental loads
+        bucket="sare-analytics",
+        file_path="ingest/wallet_test/banks/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
+        primary_keys=["id"],
+        file_format="parquet"
+    ),
+    IngestionConfig(
+        source_conn_id="wallet_db_test",
+        source_table="public.bill_accounts",
+        target_conn_id="prod_analytics",  
+        target_table="sare_wallet.bill_accounts",
+        delta_column=None,  # No delta column for full load; adjust if incremental logic is added
+        lookback_hours=None,  # Lookback window of 2 hours for incremental loads
+        bucket="sare-analytics",
+        file_path="ingest/wallet_test/bill_accounts/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
+        primary_keys=["id"],
+        file_format="parquet"
+    ),
+    # IngestionConfig(
+    #     source_conn_id="wallet_db_test",
+    #     source_table="public.bill_payment_transactions",
+    #     target_conn_id="prod_analytics",  
+    #     target_table="sare_wallet.bill_payment_transactions",
+    #     delta_column=None,  # No delta column for full load; adjust if incremental logic is added
+    #     lookback_hours=None,  # Lookback window of 2 hours for incremental loads
+    #     bucket="sare-analytics",
+    #     file_path="ingest/wallet_test/bill_payment_transactions/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
+    #     primary_keys=["id"],
+    #     file_format="parquet"
+    # ),
+    IngestionConfig(
+        source_conn_id="wallet_db_test",
+        source_table="public.business_profiles",
+        target_conn_id="prod_analytics",  
+        target_table="sare_wallet.business_profiles",
+        delta_column=None,  # No delta column for full load; adjust if incremental logic is added
+        lookback_hours=None,  # Lookback window of 2 hours for incremental loads
+        bucket="sare-analytics",
+        file_path="ingest/wallet_test/business_profiles/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
+        primary_keys=["id"],
+        file_format="parquet"
+    ),
+    # IngestionConfig(
+    #     source_conn_id="wallet_db_test",
+    #     source_table="public.c2b_mpesa_transactions",
+    #     target_conn_id="prod_analytics",  
+    #     target_table="sare_wallet.c2b_mpesa_transactions",
+    #     delta_column=None,  # No delta column for full load; adjust if incremental logic is added
+    #     lookback_hours=None,  # Lookback window of 2 hours for incremental loads
+    #     bucket="sare-analytics",
+    #     file_path="ingest/wallet_test/c2b_mpesa_transactions/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
+    #     primary_keys=["id"],
+    #     file_format="parquet"
+    # ),
+    IngestionConfig(
+        source_conn_id="wallet_db_test",
+        source_table="public.ledger_postings",
+        target_conn_id="prod_analytics",  
+        target_table="sare_wallet.ledger_postings",
+        delta_column=None,  # No delta column for full load; adjust if incremental logic is added
+        lookback_hours=None,  # Lookback window of 2 hours for incremental loads
+        bucket="sare-analytics",
+        file_path="ingest/wallet_test/ledger_postings/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
+        primary_keys=["id"],
+        file_format="parquet"
+    ),
+    IngestionConfig(
+        source_conn_id="wallet_db_test",
+        source_table="public.journal_entries",
+        target_conn_id="prod_analytics",  
+        target_table="sare_wallet.journal_entries",
+        delta_column=None,  # No delta column for full load; adjust if incremental logic is added
+        lookback_hours=None,  # Lookback window of 2 hours for incremental loads
+        bucket="sare-analytics",
+        file_path="ingest/wallet_test/ledger_postings/dt={{ ds }}/ts={{ data_interval_start.strftime('%Y-%m-%dT%H:%M:%S') }}/data.parquet",
+        primary_keys=["id"],
+        file_format="parquet"
+    ),
 ]
